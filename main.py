@@ -21,7 +21,7 @@ def load_agent():
     chat = OpenAI(temperature=0.9)
     tools = load_tools(["serpapi"])
     memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-    agent = initialize_agent(tools,chat,  agent=AgentType.CHAT_ZERO_SHOT_REACT_DESCRIPTION, verbose=True, memory=memory)
+    agent = initialize_agent(tools,chat,  agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
     return agent
 
 agent = load_agent()
