@@ -1,45 +1,47 @@
 """Python file to serve as the frontend"""
 import streamlit as st
-from streamlit_chat import message
 from dotenv import load_dotenv
-
-
-from langchain.chains import ConversationChain
-from langchain.llms import OpenAI
+from streamlit_chat import message
 from langchain.chat_models import ChatOpenAI
-from langchain.agents import load_tools
-from langchain.agents import initialize_agent
-from langchain.agents import load_tools
-from langchain.agents import AgentType
+from langchain import OpenAI
+from langchain.chains import LLMChain
+from langchain.prompts.chat import PromptTemplate
+from langchain.agents import (initialize_agent, AgentType, Tool, load_tools)
 from langchain.memory import ConversationBufferMemory
-
 
 
 load_dotenv()
 
-def load_agent():
-    chat = OpenAI(temperature=0.9)
-    tools = load_tools(["serpapi"])
-    memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
-    agent = initialize_agent(tools,chat,  agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION, verbose=True, memory=memory)
-    return agent
+llm = OpenAI(temperature=0.1)
+chat = ChatOpenAI(temperature=0.1)
+memory = ConversationBufferMemory(memory_key="chat_history")
+general_query_prompt = PromptTemplate(template="{query}", input_variables=["query"])
+general_query = LLMChain(llm=chat, prompt=general_query_prompt)
 
-agent = load_agent()
+general_query_tool = Tool(
+    name="Language Model",
+    func=general_query.run,
+    description="use this tool for general queries, conversation and reasoning"
+)
 
-def load_chain():
-    """Logic for loading the chain you want to use should go here."""
-    llm = ChatOpenAI(temperature=0.1)
-    tool_names = ["serpapi"]
-    tools = load_tools(tool_names)
-    # agent = initialize_agent(tools, llm, agent="zero-shot-react-description", verbose=True)
-    chain = ConversationChain(llm=llm)
-    return chain
+tools = load_tools(['serpapi'])
+# tools[0].name='Intermediate Answer'
+# tools[0].description="use this as a search tool to find answers for unknown questions"
+# tools.append(general_query_tool)
 
-# chain = load_chain()
+tools.append(general_query_tool)
+agent = initialize_agent(
+    agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+    tools=tools,
+    llm=llm,
+    verbose=True,
+    max_iteration=3,
+    memory=memory
+)
 
 # From here down is all the StreamLit UI.
-st.set_page_config(page_title="LangChain Demo", page_icon=":robot:")
-st.header("LangChain Demo")
+st.set_page_config(page_title="Super Assistant", page_icon=":robot:")
+st.header("Super Assistant")
 
 if "generated" not in st.session_state:
     st.session_state["generated"] = []
@@ -47,13 +49,7 @@ if "generated" not in st.session_state:
 if "past" not in st.session_state:
     st.session_state["past"] = []
 
-
-# def get_text():
-#     input_text = st.text_input("You: ", "Hello, how are you?", key="input")
-#     return input_text
-#
-
-user_input = st.text_input("chat with super chatgpt5")
+user_input = st.text_input("say hi!")
 
 if user_input:
     output = agent.run(input=user_input)
@@ -67,5 +63,4 @@ if st.session_state["generated"]:
         message(st.session_state["generated"][i], key=str(i))
         message(st.session_state["past"][i], is_user=True, key=str(i) + "_user")
 
-
-#%%
+# %%
